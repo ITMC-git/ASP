@@ -33,6 +33,10 @@
                                 <field name="asp_db_port" />
                             </div>
                             <div>
+                                <label for="last_successful_attendance_fetch" string="Last Successful Attendance Fetch" class="pe-5"/>
+                                <field name="last_successful_attendance_fetch" readonly="False"/>
+                            </div>
+                            <div>
                                  <button name="check_database_connection" type="object" string="Check Connection" class="btn btn-primary" />
                             </div>
                         </div>

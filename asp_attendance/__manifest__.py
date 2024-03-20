@@ -8,6 +8,7 @@
     "depends": ["hr_attendance"],
     "external_dependencies": {"python": ["mysql-connector-python"]},
     "data": [
+        "data/ir_cron.xml",
         "views/hr_employee_views.xml",
         "views/res_config_settings_views.xml",
     ],

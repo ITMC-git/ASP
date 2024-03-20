@@ -33,6 +33,10 @@ class ResConfigSettings(models.TransientModel):
         config_parameter="asp.asp_db_port",
         required=True,
     )
+    last_successful_attendance_fetch = fields.Datetime(
+        string="Last Successful Attendance Fetch",
+        config_parameter="asp.last_successful_attendance_fetch",
+    )
 
     def check_database_connection(self):
         self.ensure_one()
