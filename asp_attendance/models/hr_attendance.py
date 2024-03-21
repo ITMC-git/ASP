@@ -1,3 +1,5 @@
+from datetime import datetime, timedelta
+
 import mysql.connector
 from odoo import models, fields
 import logging
@@ -48,7 +50,8 @@ class HrAttendance(models.Model):
                 timestamp = last_successful_attendance_fetch.timestamp() * 1000
                 query = """
                     SELECT * FROM attendancerecordinfo
-                    WHERE AttendanceDateTime >= %s;
+                    WHERE AttendanceDateTime >= %s
+                    ORDER BY AttendanceDateTime, PersonID;
                 """
                 cursor.execute(query, (timestamp,))
 
@@ -59,7 +62,32 @@ class HrAttendance(models.Model):
                 attendance_model = self.env['hr.attendance']
                 for record in attendance_records:
                     # Process attendance records and create attendance in Odoo
-                    pass
+                    employee_id = self.env["hr.employee"].search([("asp_employee_id", "=", record[0])])
+                    if not employee_id:
+                        continue
+                    attendance_date = datetime.fromtimestamp(record[3] / 1000)
+                    existing_attendance = attendance_model.search([
+                        ("employee_id", "=", employee_id.id),
+                        ("check_in", "<=", attendance_date),
+                    ], order='check_in desc', limit=1)
+                    # Update the existing attendance record if it doesn't have a check_out time
+                    if existing_attendance and not existing_attendance.check_out:
+                        if existing_attendance.check_in != attendance_date:
+                            existing_attendance.check_out = attendance_date
+
+                    # Create a new attendance record if:
+                    # 1. No existing attendance record is found, or
+                    # 2. An existing attendance record is found, but both check_in and check_out times
+                    #    are different from the current attendance_date
+                    elif not existing_attendance or (
+                            existing_attendance
+                            and existing_attendance.check_out != attendance_date
+                            and existing_attendance.check_in != attendance_date
+                    ):
+                        attendance_model.create({
+                            "employee_id": employee_id.id,
+                            "check_in": attendance_date,
+                        })
                 config_parameter_model.set_param(
                     "asp.last_successful_attendance_fetch",
                     fields.Datetime.to_string(fields.Datetime.now())
