@@ -29,65 +29,66 @@ class DailyReporting(models.Model):
         employees = self.env["hr.employee"].search([])
         for employee in employees:
             attendances = self.env["hr.attendance"].search([("employee_id", "=", employee.id)])
-            first_check_in = attendances.search([
-                ("check_in", "!=", False),
-                ("check_in", ">=", today),
-                ("employee_id", "=", employee.id)
-            ], limit=1, order="check_in asc").check_in
-            last_check_in = attendances.search([
-                ("check_in", "!=", False),
-                ("check_in", "<=", today + timedelta(days=1)),
-                ("employee_id", "=", employee.id)
-            ], limit=1, order="check_in desc").check_in
-            first_check_out = attendances.search([
-                ("check_out", "!=", False),
-                ("check_out", ">=", today),
-                ("employee_id", "=", employee.id)
-            ], limit=1, order="check_out asc").check_out
-            last_check_out = attendances.search([
-                ("check_out", "!=", False),
-                ("check_out", "<=", today + timedelta(days=1)),
-                ("employee_id", "=", employee.id)
-            ], limit=1, order="check_out desc").check_out
-            checks = []
-            checks.append(first_check_in)
-            checks.append(last_check_in)
-            checks.append(first_check_out)
-            checks.append(last_check_out)
-            filtred_checks = [check for check in checks if check != False]
-            check_in = self.process_check_in_and_check_out(
-                filtred_checks)["check_in"]
-            check_out = self.process_check_in_and_check_out(
-               filtred_checks)["check_out"]
-            daily_reports = self.env["daily.reporting"].search(["|",
-                ("check_in", "=", check_in),
-                ("check_out", "=", check_out),
-            ])
-            if not daily_reports:
-                if check_in != check_out:
-                    self.env["daily.reporting"].create({
-                        "employee_id": employee.id,
-                        "check_in": check_in,
-                        "check_out": check_out,
-                    })
+            if attendances:
+                first_check_in = attendances.search([
+                    ("check_in", "!=", False),
+                    ("check_in", ">=", today),
+                    ("employee_id", "=", employee.id)
+                ], limit=1, order="check_in asc").check_in
+                last_check_in = attendances.search([
+                    ("check_in", "!=", False),
+                    ("check_in", "<=", today + timedelta(days=1)),
+                    ("employee_id", "=", employee.id)
+                ], limit=1, order="check_in desc").check_in
+                first_check_out = attendances.search([
+                    ("check_out", "!=", False),
+                    ("check_out", ">=", today),
+                    ("employee_id", "=", employee.id)
+                ], limit=1, order="check_out asc").check_out
+                last_check_out = attendances.search([
+                    ("check_out", "!=", False),
+                    ("check_out", "<=", today + timedelta(days=1)),
+                    ("employee_id", "=", employee.id)
+                ], limit=1, order="check_out desc").check_out
+                checks = []
+                checks.append(first_check_in)
+                checks.append(last_check_in)
+                checks.append(first_check_out)
+                checks.append(last_check_out)
+                filtred_checks = [check for check in checks if check != False]
+                check_in = self.process_check_in_and_check_out(
+                    filtred_checks)["check_in"]
+                check_out = self.process_check_in_and_check_out(
+                filtred_checks)["check_out"]
+                daily_reports = self.env["daily.reporting"].search(["|",
+                    ("check_in", "=", check_in),
+                    ("check_out", "=", check_out),
+                ])
+                if not daily_reports:
+                    if check_in != check_out:
+                        self.env["daily.reporting"].create({
+                            "employee_id": employee.id,
+                            "check_in": check_in,
+                            "check_out": check_out,
+                        })
+                    else:
+                        self.env["daily.reporting"].create({
+                            "employee_id": employee.id,
+                            "check_in": check_in,
+                            "check_out": False,
+                        })
                 else:
-                    self.env["daily.reporting"].create({
-                        "employee_id": employee.id,
-                        "check_in": check_in,
-                        "check_out": False,
-                    })
-            else:
-                if check_in != check_out:
-                    daily_reports.write({
-                        "employee_id": employee.id,
-                        "check_in": check_in,
-                        "check_out": check_out,
-                    })
-                else:
-                    daily_reports.write({
-                        "employee_id": employee.id,
-                        "check_in": check_in,
-                    })
+                    if check_in != check_out:
+                        daily_reports.write({
+                            "employee_id": employee.id,
+                            "check_in": check_in,
+                            "check_out": check_out,
+                        })
+                    else:
+                        daily_reports.write({
+                            "employee_id": employee.id,
+                            "check_in": check_in,
+                        })
 
     def process_check_in_and_check_out(self, filtred_checks):
         # The least date is the check in the most date is the check out
