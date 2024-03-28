@@ -13,7 +13,6 @@
         "views/hr_employee_views.xml",
         "views/res_config_settings_views.xml",
         "views/daily_reporting_views.xml",
-        # "views/hr_attendance_views.xml",
     ],
 
     "application": True,

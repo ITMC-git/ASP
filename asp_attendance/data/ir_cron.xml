@@ -20,7 +20,7 @@
             <field name="interval_number">1</field>
             <field name="interval_type">hours</field>
             <field name="numbercall">-1</field>
-            <field name="active">True</field>
+            <field name="active">True</field>   
         </record>
 
         <record id="cron_create_daily_reporting_records" model="ir.cron">
