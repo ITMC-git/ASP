@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="daily_reporting_view_tree" model="ir.ui.view">
+        <field name="name">daily.reporting.view.tree</field>
+        <field name="model">daily.reporting</field>
+        <field name="arch" type="xml">
+            <tree editable="bottom">
+                <field name="date"/>
+                <field name="employee_id"/>
+                <field name="check_in"/>
+                <field name="check_out"/>
+                <field name="work_hours" widget="float_time"/>
+                <field name="is_not_working_day"/>
+                <field name="holiday_id"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="daily_reporting_view_search" model="ir.ui.view">
+        <field name="name">daily.reporting.view.search</field>
+        <field name="model">daily.reporting</field>
+        <field name="arch" type="xml">
+            <search>
+                <filter name="date_today" string="Today" domain="[('date', '=', context_today())]"/>
+                <group expand="0" string="Group By">
+                    <filter string="Dates" name="group_by_date" context="{'group_by': 'date'}"/> 
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="daily_reporting_action" model="ir.actions.act_window">
+        <field name="name">Daily Reporting</field>
+        <field name="res_model">daily.reporting</field>
+        <field name="view_mode">tree</field>
+        <field name="context">{'search_default_date_today': 1, 'search_default_group_by_date': 1}</field>
+    </record>
+
+    <menuitem
+        id="daily_reporting_menu"
+        name="Daily Reporting"
+        action="daily_reporting_action"
+        parent="hr_attendance.menu_hr_attendance_report"
+        sequence="10"/>
+
+</odoo>
