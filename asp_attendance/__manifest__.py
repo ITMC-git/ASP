@@ -5,11 +5,12 @@
     "summary": "ASP Integration",
     "author": "ITMC",
     "license": "LGPL-3",
-    "depends": ["hr_attendance", "hr_holidays", "resource"],
+    "depends": ["hr_attendance", "hr_holidays"],
     "external_dependencies": {"python": ["mysql-connector-python"]},
     "data": [
         "security/ir.model.access.csv",
         "data/ir_cron_data.xml",
+        "data/ir_cron.xml",
         "views/hr_employee_views.xml",
         "views/res_config_settings_views.xml",
         "views/daily_reporting_views.xml",
