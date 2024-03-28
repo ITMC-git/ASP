@@ -5,14 +5,13 @@ from datetime import datetime, timedelta
 class DailyReporting(models.Model):
     _name = "daily.reporting"
     _description = "Daily Reporting"
-    _inherit = ['resource.mixin']
 
     date = fields.Date(default=fields.Date.today())
     employee_id = fields.Many2one("hr.employee")
     check_in = fields.Datetime()
     check_out = fields.Datetime()
     work_hours = fields.Float(compute="_compute_working_hours")
-    is_not_working_day = fields.Boolean() 
+    is_not_working_day = fields.Boolean()
     holiday_id = fields.Many2one("hr.leave")
 
     @api.depends("check_in", "check_out")
@@ -26,61 +25,58 @@ class DailyReporting(models.Model):
 
     @api.model
     def record_first_check_in_and_last_check_out(self):
-        today = fields.Date.today()
-        records = self.env["daily.reporting"]
-        hr_attendance_model = self.env["hr.attendance"]
-        attendance_today = hr_attendance_model.search(["|", 
-        ("check_in", "<=", today),("check_out", "<=", today),
-        "|",
-        ("check_out", ">=", today - timedelta(days=1)),
-        ("check_in", ">=", today - timedelta(days=1)),
-        ])
         employees = self.env["hr.employee"].search([])
-        for employee in employees:
-            existing_attendance = attendance_today.filtered(lambda x: x.employee_id.id == employee.id)
-            check_ins = existing_attendance.mapped("check_in")
-            check_outs = existing_attendance.mapped("check_out")
-            checks = check_ins + check_outs
-            filtered_checks = [check for check in checks if check != False]
-            filtered_checks_f = f"checks {filtered_checks}"
-            first_check_in = min(filtered_checks)
-            last_check_out = max(filtered_checks)
-            check_in_f = f"check in {first_check_in}"
-            check_out_f = f"check out {last_check_out}"
-            weekday = today.weekday()
-            test = employee.resource_calendar_id.attendance_ids.search([
-                ("dayofweek", "=", weekday)
-            ],limit=1)
+        employee_test = self.env["hr.employee"].browse(2)
+        attendances = self.env["hr.attendance"].search([("employee_id", "=", employee_test.id)])
+        date_string = "03/20/2024 00:00:00"
+        date_object = datetime.strptime(date_string, "%m/%d/%Y %H:%M:%S")
+        first_check_in = attendances.search([
+            ("check_in", "!=", False),
+            ("check_in", ">=", date_object),
+            ("employee_id", "=", employee_test.id)
+        ], limit=1, order="check_in asc").check_in
+        last_check_in = attendances.search([
+            ("check_in", "!=", False),
+            ("check_in", "<=", date_object + timedelta(days=1)),
+            ("employee_id", "=", employee_test.id)
+        ], limit=1, order="check_in desc").check_in
+        first_check_out = attendances.search([
+            ("check_out", "!=", False),
+            ("check_out", ">=", date_object),
+            ("employee_id", "=", employee_test.id)
+        ], limit=1, order="check_out asc").check_out
+        last_check_out = attendances.search([
+            ("check_out", "!=", False),
+            ("check_out", "<=", date_object + timedelta(days=1)),
+            ("employee_id", "=", employee_test.id)
+        ], limit=1, order="check_out desc").check_out
 
-            resources = self.env["resource.mixin"]
-            leaves = resources._get_leave_days_data_batch(first_check_in, last_check_out)
-            leaves_f = f"leaves {leaves}"
-            if first_check_in.date() == last_check_out.date():
-                today_records = records.search(["|",
-                    ("check_in", "<=", today),("check_out", "<=", today),
-                    "|",
-                    ("check_out", ">=", today - timedelta(days=1)),
-                    ("check_in", ">=", today - timedelta(days=1)),])
-                if today_records:
-                    for rec in today_records:
-                        rec.check_in = first_check_in
-                        rec.check_out = last_check_out
-                else:
-                    if not test:
-                        records.create({
-                            "employee_id": employee,
-                            "check_in": first_check_in,
-                            "check_out": last_check_out,
-                            "is_not_working_day": True
-                        })
-                    else:
-                        records.create({
-                            "employee_id": employee,
-                            "check_in": first_check_in,
-                            "check_out": last_check_out,
-                        })
+        check_in = self.process_check_in_and_check_out(
+            first_check_in,
+            last_check_in,
+            first_check_out,
+            last_check_out)["check_in"]
+        check_out = self.process_check_in_and_check_out(
+            first_check_in,
+            last_check_in,
+            first_check_out,
+            last_check_out)["check_out"]
 
-     
+        self.env["daily.reporting"].create({
+            "employee_id": employee_test.id,
+            "check_in": check_in,
+            "check_out": check_out,
+        })
+
+    def process_check_in_and_check_out(self, first_check_in, last_check_in, first_check_out, last_check_out):
+        # The least date is the check in the most date is the check out
+        check_in = min(first_check_in, last_check_in, first_check_out, last_check_out)
+        check_out = max(first_check_in, last_check_in, first_check_out, last_check_out)
+        return {
+            "check_in": check_in,
+            "check_out": check_out
+        }
+
     @api.model
     def create_unchecked_daily_reporting_records(self):
         today = fields.Date.today()
