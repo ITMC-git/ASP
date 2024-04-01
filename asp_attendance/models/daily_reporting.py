@@ -10,7 +10,9 @@ class DailyReporting(models.Model):
     employee_id = fields.Many2one("hr.employee")
     check_in = fields.Datetime()
     check_out = fields.Datetime()
-    work_hours = fields.Float(compute="_compute_working_hours")
+    check_in_location = fields.Char()
+    check_out_location = fields.Char()
+    work_hours = fields.Float(compute="_compute_working_hours", store=True)
     is_not_working_day = fields.Boolean()
     holiday_id = fields.Many2one("hr.leave")
 
@@ -104,26 +106,21 @@ class DailyReporting(models.Model):
         today = fields.Date.today()
         employees = self.env["hr.employee"].search([])
         for employee in employees:
-            checked_attendance = self.env["hr.attendance"].search([
-                ("employee_id", "=", employee.id),
-                "|", ("check_in", "!=", False),
-                ("check_out", "!=", False),
-                ("date", "<=", today)
-            ])
             weekday = today.weekday()
-            weekday -= 1
-            weekday_f = f"weekday {weekday}"
-            test = employee.resource_calendar_id.attendance_ids.search([
+            working_day = employee.resource_calendar_id.attendance_ids.search([
                 ("dayofweek", "=", weekday)
             ],limit=1)
-            if not test:
-                if not checked_attendance:
+            existing_attendance = self.env["daily.reporting"].search([
+                        ("employee_id", "=", employee.id),
+                        ("date", "=", today),  
+                ])
+            if not existing_attendance:
+                if not working_day:
                     self.env["daily.reporting"].create({
                         "employee_id": employee.id,
                         "is_not_working_day": True,
                     })
-            else:
-                 if not checked_attendance:
+                else:
                     self.env["daily.reporting"].create({
                         "employee_id": employee.id,
                     })
