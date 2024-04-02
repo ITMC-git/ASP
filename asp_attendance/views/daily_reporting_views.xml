@@ -66,6 +66,7 @@
         name="Daily Reporting"
         action="daily_reporting_action"
         parent="hr_attendance.menu_hr_attendance_report"
+        groups="hr_attendance.group_hr_attendance_user"
         sequence="10"/>
 
 </odoo>
