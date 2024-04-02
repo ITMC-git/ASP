@@ -15,6 +15,7 @@ class DailyReporting(models.Model):
     work_hours = fields.Float(compute="_compute_working_hours", store=True)
     is_not_working_day = fields.Boolean()
     holiday_id = fields.Many2one("hr.leave")
+    is_late_check_in = fields.Boolean(compute="_compute_late_check_in", store=True)
 
     @api.depends("check_in", "check_out")
     def _compute_working_hours(self):
@@ -24,6 +25,24 @@ class DailyReporting(models.Model):
                 rec.work_hours = duration.total_seconds() / 3600
             else:
                 rec.work_hours = 0
+    
+    @api.depends("check_in", "employee_id.resource_calendar_id.attendance_ids", "employee_id.resource_calendar_id.attendance_ids.hour_from")
+    def _compute_late_check_in(self):
+        for rec in self:
+            if not rec.check_in:
+                rec.is_late_check_in = False
+            else:
+                today = fields.Date.today()
+                weekday = today.weekday()
+                working_day = rec.employee_id.resource_calendar_id.attendance_ids.filtered(lambda r: int(r.dayofweek) == weekday)
+                if working_day:
+                    hour_from = min(working_day.mapped("hour_from"))
+                    check_in_hour = rec.check_in.hour
+                    check_in_hour += 4
+                if check_in_hour > hour_from:
+                    rec.is_late_check_in = True
+                else:
+                    rec.is_late_check_in = False
 
     @api.model
     def record_first_check_in_and_last_check_out(self):
@@ -107,20 +126,49 @@ class DailyReporting(models.Model):
         employees = self.env["hr.employee"].search([])
         for employee in employees:
             weekday = today.weekday()
-            working_day = employee.resource_calendar_id.attendance_ids.search([
-                ("dayofweek", "=", weekday)
-            ],limit=1)
+            working_day = employee.resource_calendar_id.attendance_ids.filtered(lambda r: int(r.dayofweek) == weekday)
             existing_attendance = self.env["daily.reporting"].search([
-                        ("employee_id", "=", employee.id),
-                        ("date", "=", today),  
-                ])
+                ("employee_id", "=", employee.id),
+                ("date", "=", today),  
+            ])
             if not existing_attendance:
+                approved_leave = self.env["hr.leave"].search([
+                    ("employee_id", "=", employee.id),
+                    ("state", "=", "validate"),
+                    ("request_date_from", "<=", today),
+                    ("request_date_to", ">=", today),
+                ], limit=1)
                 if not working_day:
                     self.env["daily.reporting"].create({
                         "employee_id": employee.id,
                         "is_not_working_day": True,
                     })
                 else:
-                    self.env["daily.reporting"].create({
-                        "employee_id": employee.id,
-                    })
+                    if approved_leave:
+                        self.env["daily.reporting"].create({
+                            "employee_id": employee.id,
+                            "is_not_working_day": True,
+                            "holiday_id": approved_leave.id,
+                        })
+                    else:
+                        self.env["daily.reporting"].create({
+                            "employee_id": employee.id,
+                        })
+    
+    @api.model
+    def create_daily_reporting_march_records(self):
+        first_check_in = '2024-03-01'
+        last_check_in = '2024-04-01'
+        march_attendance = self.env["hr.attendance"].search([
+            ("check_in", ">=", first_check_in),
+            ("check_in", "<", last_check_in)
+        ])
+        if march_attendance:
+            for attendance_record in march_attendance:
+                self.env['daily.reporting'].create({
+                    "date": attendance_record.check_in.date(),
+                    "employee_id": attendance_record.employee_id.id,
+                    "check_in": attendance_record.check_in,
+                    "check_out": attendance_record.check_out,
+                })
+        
