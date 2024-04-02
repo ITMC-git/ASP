@@ -34,7 +34,7 @@ class DailyReporting(models.Model):
             else:
                 today = fields.Date.today()
                 weekday = today.weekday()
-                working_day = rec.employee_id.resource_calendar_id.attendance_ids.filtered(lambda r: int(r.dayofweek) == weekday)
+                working_day = rec.employee_id.resource_calendar_id.attendance_ids.filtered(lambda x: int(x.dayofweek) == weekday)
                 if working_day:
                     hour_from = min(working_day.mapped("hour_from"))
                     check_in_hour = rec.check_in.hour
@@ -126,7 +126,7 @@ class DailyReporting(models.Model):
         employees = self.env["hr.employee"].search([])
         for employee in employees:
             weekday = today.weekday()
-            working_day = employee.resource_calendar_id.attendance_ids.filtered(lambda r: int(r.dayofweek) == weekday)
+            working_day = employee.resource_calendar_id.attendance_ids.filtered(lambda x: int(x.dayofweek) == weekday)
             existing_attendance = self.env["daily.reporting"].search([
                 ("employee_id", "=", employee.id),
                 ("date", "=", today),  
