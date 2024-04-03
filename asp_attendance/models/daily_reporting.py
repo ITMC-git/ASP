@@ -1,7 +1,5 @@
 from odoo import fields, models, api
 from datetime import datetime, timedelta
-from zoneinfo import ZoneInfo
-
 
 
 class DailyReporting(models.Model):
@@ -43,7 +41,7 @@ class DailyReporting(models.Model):
                     rec.is_late_check_in = check_in.hour > hour_from
                 else:
                     rec.is_late_check_in = False
-                    
+
     @api.model
     def record_first_check_in_and_last_check_out(self):
         today = fields.Date.today()
