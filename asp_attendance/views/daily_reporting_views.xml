@@ -30,9 +30,11 @@
                 <field name="check_out_location"/>
                 <filter string="My Attendances" name="my_attendances" domain="[('employee_id.user_id', '=', uid)]"/>
                 <separator/>
+                <filter name="missed_attendance" string="Missed Attendances" domain="[('is_not_working_day', '=', False), ('check_in', '=', False)]"/>
+                <filter name="late_check_in" string="Late Check-in" domain="[('is_late_check_in', '=', True)]"/>
+                <!-- 6 is added to context_today(). This is because the time in the database is 4 hours back.-->
                 <filter string="After 10 Check-in" name="after_10_check_in"
-                    domain="[('check_in', '&gt;=', context_today() + relativedelta(hours=6)),
-                    ('check_in', '&lt;=', context_today() + relativedelta(hours=20))]"/>
+                    domain="[('check_in', '&gt;=', (context_today() + relativedelta(hours=6)))]"/>
                 <separator/>
                 <filter string="Today's Attendances" name="todays_attendances"
                     domain="[('date', '=', context_today())]"/>
@@ -65,6 +67,7 @@
         name="Daily Reporting"
         action="daily_reporting_action"
         parent="hr_attendance.menu_hr_attendance_report"
+        groups="hr_attendance.group_hr_attendance_user"
         sequence="10"/>
 
 </odoo>
