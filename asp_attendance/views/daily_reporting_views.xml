@@ -32,8 +32,9 @@
                 <separator/>
                 <filter name="missed_attendance" string="Missed Attendances" domain="[('is_not_working_day', '=', False), ('check_in', '=', False)]"/>
                 <filter name="late_check_in" string="Late Check-in" domain="[('is_late_check_in', '=', True)]"/>
+                <!-- 6 is added to context_today(). This is because the time in the database is 4 hours back.-->
                 <filter string="After 10 Check-in" name="after_10_check_in"
-                    domain="[('check_in', '&gt;=', context_today() + relativedelta(hours=6))]"/>
+                    domain="[('check_in', '&gt;=', (context_today() + relativedelta(hours=6)))]"/>
                 <separator/>
                 <filter string="Today's Attendances" name="todays_attendances"
                     domain="[('date', '=', context_today())]"/>

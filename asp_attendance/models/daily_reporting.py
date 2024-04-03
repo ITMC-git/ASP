@@ -1,5 +1,7 @@
 from odoo import fields, models, api
 from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
+
 
 
 class DailyReporting(models.Model):
@@ -37,14 +39,11 @@ class DailyReporting(models.Model):
                 working_day = rec.employee_id.resource_calendar_id.attendance_ids.filtered(lambda x: int(x.dayofweek) == weekday)
                 if working_day:
                     hour_from = min(working_day.mapped("hour_from"))
-                    check_in_hour = rec.check_in.hour
-                    check_in_hour += 4
-                    if check_in_hour > hour_from:
-                        rec.is_late_check_in = True
-                    else:
-                        rec.is_late_check_in = False
+                    check_in = fields.Datetime.context_timestamp(rec.with_context(tz='Asia/Tbilisi'), rec.check_in)
+                    rec.is_late_check_in = check_in.hour > hour_from
                 else:
                     rec.is_late_check_in = False
+                    
     @api.model
     def record_first_check_in_and_last_check_out(self):
         today = fields.Date.today()
@@ -144,17 +143,17 @@ class DailyReporting(models.Model):
                         "employee_id": employee.id,
                         "is_not_working_day": True,
                     })
+              
+                elif approved_leave:
+                    self.env["daily.reporting"].create({
+                        "employee_id": employee.id,
+                        "is_not_working_day": True,
+                        "holiday_id": approved_leave.id,
+                    })
                 else:
-                    if approved_leave:
-                        self.env["daily.reporting"].create({
-                            "employee_id": employee.id,
-                            "is_not_working_day": True,
-                            "holiday_id": approved_leave.id,
-                        })
-                    else:
-                        self.env["daily.reporting"].create({
-                            "employee_id": employee.id,
-                        })
+                    self.env["daily.reporting"].create({
+                        "employee_id": employee.id,
+                    })
     
     @api.model
     def create_daily_reporting_march_records(self):
