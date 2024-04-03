@@ -39,11 +39,12 @@ class DailyReporting(models.Model):
                     hour_from = min(working_day.mapped("hour_from"))
                     check_in_hour = rec.check_in.hour
                     check_in_hour += 4
-                if check_in_hour > hour_from:
-                    rec.is_late_check_in = True
+                    if check_in_hour > hour_from:
+                        rec.is_late_check_in = True
+                    else:
+                        rec.is_late_check_in = False
                 else:
                     rec.is_late_check_in = False
-
     @api.model
     def record_first_check_in_and_last_check_out(self):
         today = fields.Date.today()
