@@ -65,6 +65,19 @@ class DailyReporting(models.Model):
         return attendance_data
 
     @api.model
+    def _not_working_day_or_leave(self, employee, date):
+        """ Check if a date is not a working day or a leave. """
+        weekday = date.weekday()
+        working_day = employee.resource_calendar_id.attendance_ids.filtered(
+            lambda x: int(x.dayofweek) == weekday)
+        leave = employee.resource_calendar_id.leave_ids.filtered(
+            lambda x: x.date_from.date() == date)
+        return {
+            "not_working_day": bool(not working_day or leave),
+            "leave": leave
+        }
+
+    @api.model
     def create_daily_report(self, date=None):
         today = date or fields.Date.today()
         tomorrow = today + timedelta(days=1)
@@ -83,11 +96,16 @@ class DailyReporting(models.Model):
                 ("check_out", "<", tomorrow),
             ])
             daily_report = self.search([("date", "=", today), ("employee_id", "=", employee.id)])
+            not_working_day_or_leave = self._not_working_day_or_leave(employee, today)
+            is_not_working_day = not_working_day_or_leave["not_working_day"]
+            leave = not_working_day_or_leave["leave"] if not_working_day_or_leave["leave"].holiday_id else False
 
             if not daily_report:
                 daily_report = self.create({
                     "date": today,
                     "employee_id": employee.id,
+                    "is_not_working_day": is_not_working_day,
+                    "holiday_id": leave.holiday_id.id if leave else False,
                 })
 
             if attendances:
@@ -99,4 +117,7 @@ class DailyReporting(models.Model):
                     "check_out": check_out if check_out > check_in else None,
                 })
 
-            # TODO: Implement daily_report update. Set not working days or vacation
+            daily_report.update({
+                "is_not_working_day": is_not_working_day,
+                "holiday_id": leave.holiday_id.id if leave else False,
+            })
