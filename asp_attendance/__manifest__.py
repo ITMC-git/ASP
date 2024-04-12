@@ -13,7 +13,14 @@
         "views/hr_employee_views.xml",
         "views/res_config_settings_views.xml",
         "views/daily_reporting_views.xml",
+        "wizard/update_daily_report.xml",
     ],
+    'assets': {
+        'web.assets_backend': [
+            'asp_attendance/static/src/js/**/*',
+            'asp_attendance/static/src/xml/**/*',
+        ],
+    },
 
     "application": True,
 }

@@ -5,7 +5,7 @@
         <field name="name">daily.reporting.view.tree</field>
         <field name="model">daily.reporting</field>
         <field name="arch" type="xml">
-            <tree editable="bottom">
+            <tree editable="bottom" js_class="asp_daily_report">
                 <field name="date"/>
                 <field name="employee_id"/>
                 <field name="check_in"/>
