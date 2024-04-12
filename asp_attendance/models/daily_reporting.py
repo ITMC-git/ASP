@@ -54,13 +54,15 @@ class DailyReporting(models.Model):
     def _get_attendance_data(self, attendances, today):
         attendance_data = []
         for attendance in attendances:
-            check_in = attendance.check_in
-            check_out = attendance.check_out
+            check_in = attendance.check_in + timedelta(hours=4)
+            check_out =  attendance.check_out + timedelta(hours=4) if attendance.check_out else False
 
             if check_in and check_in.date() == today:
+                check_in -= timedelta(hours=4)
                 attendance_data.append(check_in)
 
             if check_out and check_out.date() == today:
+                check_out -= timedelta(hours=4)
                 attendance_data.append(check_out)
         return attendance_data
 
@@ -70,16 +72,20 @@ class DailyReporting(models.Model):
         weekday = date.weekday()
         working_day = employee.resource_calendar_id.attendance_ids.filtered(
             lambda x: int(x.dayofweek) == weekday)
-        leave = employee.resource_calendar_id.leave_ids.filtered(
-            lambda x: x.date_from.date() == date)
+        leave = self.env["hr.leave"].search([
+        ("request_date_from", "<=", date), 
+        ("request_date_to", ">=", date),
+        ("employee_id", "=", employee.id),
+        ("state", "=", "validate")
+        ])
         return {
             "not_working_day": bool(not working_day or leave),
             "leave": leave
         }
 
     @api.model
-    def create_daily_report(self, date=None):
-        today = date or fields.Date.today()
+    def create_daily_report(self, date_from=None):
+        today = date_from or fields.Date.today()
         tomorrow = today + timedelta(days=1)
         employees = self.env["hr.employee"].search([])
 
@@ -98,14 +104,14 @@ class DailyReporting(models.Model):
             daily_report = self.search([("date", "=", today), ("employee_id", "=", employee.id)])
             not_working_day_or_leave = self._not_working_day_or_leave(employee, today)
             is_not_working_day = not_working_day_or_leave["not_working_day"]
-            leave = not_working_day_or_leave["leave"] if not_working_day_or_leave["leave"].holiday_id else False
+            leave = not_working_day_or_leave["leave"] if not_working_day_or_leave["leave"] else False
 
             if not daily_report:
                 daily_report = self.create({
                     "date": today,
                     "employee_id": employee.id,
                     "is_not_working_day": is_not_working_day,
-                    "holiday_id": leave.holiday_id.id if leave else False,
+                    "holiday_id": leave.id if leave else False,
                 })
 
             if attendances:
@@ -119,5 +125,5 @@ class DailyReporting(models.Model):
 
             daily_report.update({
                 "is_not_working_day": is_not_working_day,
-                "holiday_id": leave.holiday_id.id if leave else False,
+                "holiday_id": leave.id if leave else False,
             })
