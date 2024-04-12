@@ -5,7 +5,7 @@
         <field name="name">daily.reporting.view.tree</field>
         <field name="model">daily.reporting</field>
         <field name="arch" type="xml">
-            <tree editable="bottom">
+            <tree editable="bottom" js_class="asp_daily_report">
                 <field name="date"/>
                 <field name="employee_id"/>
                 <field name="check_in"/>
@@ -34,15 +34,15 @@
                 <filter name="late_check_in" string="Late Check-in" domain="[('is_late_check_in', '=', True)]"/>
                 <!-- 6 is added to context_today(). This is because the time in the database is 4 hours back.-->
                 <filter string="After 10 Check-in" name="after_10_check_in"
-                    domain="[('check_in', '&gt;=', (context_today() + relativedelta(hours=6)))]"/>
+                    domain="[('is_after_10_check_in', '=', True)]"/>
                 <separator/>
                 <filter string="Today's Attendances" name="todays_attendances"
                     domain="[('date', '=', context_today())]"/>
                 <filter string="Yesterday's Attendances" name="yesterdays_attendances"
                     domain="[('date','=', (context_today() - relativedelta(days=1)).strftime('%Y-%m-%d'))]"/>
-                <filter name="this_week_attendance" string="This Week's Attendances" domain="[
-                        ('date', '>=', (datetime.datetime.combine(context_today() + relativedelta(weeks=-1,days=1,weekday=0), datetime.time(0,0,0)).to_utc()).strftime('%Y-%m-%d %H:%M:%S')),
-                        ('date', '&lt;', (datetime.datetime.combine(context_today() + relativedelta(days=1,weekday=0), datetime.time(0,0,0)).to_utc()).strftime('%Y-%m-%d %H:%M:%S'))]"/>
+                <filter name="last_week_attendance" string="Last Week's Attendances" 
+                domain="[('date', '&gt;=', (context_today() - relativedelta(days=7))),('date', '&lt;=', context_today())]"/>
+                                
                 <separator/>
                 <filter name="date" string="Dates" date="date" default_period="last_month" />
                 <group expand="0" string="Group By">

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<templates id="template" xml:space="preserve">
+
+<t t-name="DailyReport.Buttons" t-inherit="web.ListView.Buttons" t-inherit-mode="primary" owl="1">
+    <xpath expr="(//div/*)[last()]" position="after">
+		<button type="button" t-on-click="actionUpdateDailyReport" class="btn btn-secondary me-2">
+			<i class="fa fa-refresh me-1" role="img" aria-label="Refresh" title="Refresh"></i>
+			Update
+		</button>
+    </xpath>
+</t>
+
+</templates>
