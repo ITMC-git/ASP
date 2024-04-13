@@ -124,7 +124,7 @@ class DailyReporting(models.Model):
                 not_working_day_or_leave = self._not_working_day_or_leave(employee, current_date)
                 is_not_working_day = not_working_day_or_leave["not_working_day"]
                 leave = not_working_day_or_leave["leave"] if not_working_day_or_leave["leave"].holiday_id else False
-
+               
                 if not daily_report:
                     daily_report = self.create({
                         "date": current_date,
