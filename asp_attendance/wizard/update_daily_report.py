@@ -12,8 +12,8 @@ class AspUpdateDailyReport(models.TransientModel):
 
     @api.constrains("date_from", "date_to")
     def _check_dates(self):
+        today = fields.Date.today()
         for rec in self:
-            today = fields.Date.today()
             if rec.date_from and rec.date_from and rec.date_from > rec.date_to:
                 raise ValidationError(_("Start date must be lower than end date."))
             elif rec.date_from > today or rec.date_to > today:
