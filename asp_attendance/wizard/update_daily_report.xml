@@ -11,7 +11,15 @@
                         Select date to update daily report.
                     </div>
                     <group>
-                        <field name="date" required="1"/>
+                        <group>
+                            <label for="date_from" string="Dates" />
+                            <div class="o_row">
+                                <span class="text-muted">From</span>
+                                <field name="date_from" class="oe_inline"  widget="daterange" options="{'related_end_date': 'date_to'}" />
+                                <span class="text-muted">including</span>
+                                <field name="date_to" class="oe_inline" widget="daterange" options="{'related_end_date': 'date_from'}" />
+                            </div>
+                        </group>
                     </group>
                 </div>
                 <footer>

@@ -1,6 +1,6 @@
 from odoo import fields, models, api
-from datetime import timedelta
-
+from datetime import timedelta, datetime, time
+import pytz
 
 class DailyReporting(models.Model):
     _name = "daily.reporting"
@@ -53,71 +53,98 @@ class DailyReporting(models.Model):
     @api.model
     def _get_attendance_data(self, attendances, today):
         attendance_data = []
+        tz = pytz.timezone('Asia/Tbilisi')  # Assuming the timezone of the attendance records
+
+        # Convert today to the user's timezone
+        today_tz = tz.localize(datetime.combine(today, time.min))
+
         for attendance in attendances:
             check_in = attendance.check_in
             check_out = attendance.check_out
 
-            if check_in and check_in.date() == today:
+            # Convert check_in and check_out to the user's timezone
+            check_in_tz = check_in.astimezone(tz) if check_in else None
+            check_out_tz = check_out.astimezone(tz) if check_out else None
+
+            # Check if the date component of check_in and check_out matches today
+            if check_in_tz and check_in_tz.date() == today_tz.date():
                 attendance_data.append(check_in)
 
-            if check_out and check_out.date() == today:
+            if check_out_tz and check_out_tz.date() == today_tz.date():
                 attendance_data.append(check_out)
+
         return attendance_data
 
     @api.model
     def _not_working_day_or_leave(self, employee, date):
         """ Check if a date is not a working day or a leave. """
+   
         weekday = date.weekday()
         working_day = employee.resource_calendar_id.attendance_ids.filtered(
             lambda x: int(x.dayofweek) == weekday)
         leave = employee.resource_calendar_id.leave_ids.filtered(
-            lambda x: x.date_from.date() == date)
+            lambda x: x.date_from.date() <= date.date() and x.date_to.date() >= date.date())
+        if leave.holiday_id:
+            leave = leave.filtered(lambda x: x.holiday_id.employee_id == employee)
         return {
             "not_working_day": bool(not working_day or leave),
             "leave": leave
         }
 
     @api.model
-    def create_daily_report(self, date=None):
-        today = date or fields.Date.today()
-        tomorrow = today + timedelta(days=1)
+    def create_daily_report(self, date_from=None, date_to=None):
+        tz = pytz.timezone('Asia/Tbilisi')
+        date_from = date_from or fields.Date.today()
+        date_to = date_to or date_from
         employees = self.env["hr.employee"].search([])
+
+        date_from_tz = tz.localize(datetime.combine(date_from, time.min))
+        date_from_utc = date_from_tz.astimezone(pytz.utc)
+        date_to_tz = tz.localize(datetime.combine(date_to, time.min))
+        date_to_utc = date_to_tz.astimezone(pytz.utc)
 
         for employee in employees:
             # Get today's attendances
-            attendances = self.env["hr.attendance"].search([
-                ("employee_id", "=", employee.id),
-                "|",
-                "&",
-                ("check_in", ">=", today),
-                ("check_in", "<", tomorrow),
-                "&",
-                ("check_out", ">=", today),
-                ("check_out", "<", tomorrow),
-            ])
-            daily_report = self.search([("date", "=", today), ("employee_id", "=", employee.id)])
-            not_working_day_or_leave = self._not_working_day_or_leave(employee, today)
-            is_not_working_day = not_working_day_or_leave["not_working_day"]
-            leave = not_working_day_or_leave["leave"] if not_working_day_or_leave["leave"].holiday_id else False
+            days = (date_to_tz - date_from_tz).days
+            current_date = date_from_tz
+            curent_date_from = date_from_utc
+            for _ in range(0, days+1):
+                tomorrow = curent_date_from + timedelta(days=1)
+                attendances = self.env["hr.attendance"].search([
+                    ("employee_id", "=", employee.id),
+                    "|",
+                    "&",
+                    ("check_in", ">=", curent_date_from),
+                    ("check_in", "<", tomorrow),
+                    "&",
+                    ("check_out", ">=", curent_date_from),
+                    ("check_out", "<", tomorrow),
+                ])
+                daily_report = self.search([("date", "=", current_date), ("employee_id", "=", employee.id)])
+                not_working_day_or_leave = self._not_working_day_or_leave(employee, current_date)
+                is_not_working_day = not_working_day_or_leave["not_working_day"]
+                leave = not_working_day_or_leave["leave"] if not_working_day_or_leave["leave"].holiday_id else False
+               
+                if not daily_report:
+                    daily_report = self.create({
+                        "date": current_date,
+                        "employee_id": employee.id,
+                        "is_not_working_day": is_not_working_day,
+                        "holiday_id":  leave.holiday_id.id if leave else False,
+                    })
 
-            if not daily_report:
-                daily_report = self.create({
-                    "date": today,
-                    "employee_id": employee.id,
-                    "is_not_working_day": is_not_working_day,
-                    "holiday_id": leave.holiday_id.id if leave else False,
-                })
+                if attendances:
+                    attendance_data = self._get_attendance_data(attendances, current_date)
+                    check_in = min(attendance_data)
+                    check_out = max(attendance_data)
+                    daily_report.update({
+                        "check_in": check_in,
+                        "check_out": check_out if check_out > check_in else None,
+                    })
 
-            if attendances:
-                attendance_data = self._get_attendance_data(attendances, today)
-                check_in = min(attendance_data)
-                check_out = max(attendance_data)
                 daily_report.update({
-                    "check_in": check_in,
-                    "check_out": check_out if check_out > check_in else None,
+                    "is_not_working_day": is_not_working_day,
+                    "holiday_id":  leave.holiday_id.id if leave else False,
                 })
-
-            daily_report.update({
-                "is_not_working_day": is_not_working_day,
-                "holiday_id": leave.holiday_id.id if leave else False,
-            })
+                current_date += timedelta(days=1)
+                curent_date_from += timedelta(days=1)
