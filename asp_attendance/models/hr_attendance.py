@@ -10,6 +10,9 @@ _logger = logging.getLogger(__name__)
 class HrAttendance(models.Model):
     _inherit = "hr.attendance"
 
+    check_in_location = fields.Char(default="Odoo")
+    check_out_location = fields.Char(default="Odoo")
+    
     def get_mysql_connection(self):
         try:
             # Configure MySQL connection

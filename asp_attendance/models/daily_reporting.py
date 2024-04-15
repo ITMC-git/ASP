@@ -90,6 +90,31 @@ class DailyReporting(models.Model):
             "not_working_day": bool(not working_day or leave),
             "leave": leave
         }
+    
+    @api.model
+    def _get_attendance_locations(self, attendances, employee, check_in, check_out):
+        for attendance in attendances:
+            if check_out > check_in:
+                if attendance.employee_id == employee:
+                    if attendance.check_in == check_in:
+                        check_in_location = attendance.check_in_location
+                    elif attendance.check_out == check_in:
+                        check_in_location = attendance.check_out_location 
+                    if attendance.check_out == check_out:
+                        check_out_location = attendance.check_out_location
+                    elif attendance.check_in == check_out:
+                        check_out_location = attendance.check_in_location     
+            else:
+                if attendance.employee_id == employee:
+                    if attendance.check_in == check_in:
+                        check_in_location = attendance.check_in_location
+                    elif attendance.check_out == check_in:
+                        check_in_location = attendance.check_out_location
+                check_out_location = False
+        return {
+            "check_in_location": check_in_location if check_in_location else False,
+            "check_out_location": check_out_location if check_out_location else False
+        }
 
     @api.model
     def create_daily_report(self, date_from=None, date_to=None):
@@ -137,9 +162,14 @@ class DailyReporting(models.Model):
                     attendance_data = self._get_attendance_data(attendances, current_date)
                     check_in = min(attendance_data)
                     check_out = max(attendance_data)
+                    locations = self._get_attendance_locations(attendances, employee, check_in, check_out)
+                    check_in_location = locations["check_in_location"]
+                    check_out_location = locations["check_out_location"]
                     daily_report.update({
                         "check_in": check_in,
                         "check_out": check_out if check_out > check_in else None,
+                        "check_in_location": check_in_location,
+                        "check_out_location": check_out_location if check_out > check_in else False
                     })
 
                 daily_report.update({
