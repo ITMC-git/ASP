@@ -69,6 +69,7 @@ class HrAttendance(models.Model):
                     if not employee_id:
                         continue
                     attendance_date = datetime.fromtimestamp(record[3] / 1000)
+                    attendance_location = record[7]  # DeviceName column in attendance record
                     existing_attendance = attendance_model.search([
                         ("employee_id", "=", employee_id.id),
                         ("check_in", "<=", attendance_date),
@@ -77,6 +78,7 @@ class HrAttendance(models.Model):
                     if existing_attendance and not existing_attendance.check_out:
                         if existing_attendance.check_in != attendance_date:
                             existing_attendance.check_out = attendance_date
+                            existing_attendance.check_out_location = attendance_location
 
                     # Create a new attendance record if:
                     # 1. No existing attendance record is found, or
@@ -90,6 +92,7 @@ class HrAttendance(models.Model):
                         attendance_model.create({
                             "employee_id": employee_id.id,
                             "check_in": attendance_date,
+                            "check_in_location": attendance_location,
                         })
                 config_parameter_model.set_param(
                     "asp.last_successful_attendance_fetch",
