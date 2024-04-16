@@ -62,19 +62,17 @@ class DailyReporting(models.Model):
             check_in = attendance.check_in
             check_out = attendance.check_out
 
-            # Convert check_in and check_out to the user's timezone
-            check_in_tz = check_in.astimezone(tz) if check_in else None
-            check_out_tz = check_out.astimezone(tz) if check_out else None
-
             # Check if the date component of check_in and check_out matches today
-            if check_in_tz and check_in_tz.date() == today_tz.date():
-                attendance_data.append(check_in)
+            if check_in and check_in.date() == today_tz.date():
+                # Append a tuple of (check_in time, location) to attendance_data
+                attendance_data.append((check_in, attendance.check_in_location))
 
-            if check_out_tz and check_out_tz.date() == today_tz.date():
-                attendance_data.append(check_out)
+            if check_out and check_out.date() == today_tz.date():
+                # Append a tuple of (check_out time, location) to attendance_data
+                attendance_data.append((check_out, attendance.check_out_location))
 
         return attendance_data
-
+       
     @api.model
     def _not_working_day_or_leave(self, employee, date):
         """ Check if a date is not a working day or a leave. """
@@ -91,31 +89,6 @@ class DailyReporting(models.Model):
             "leave": leave
         }
     
-    @api.model
-    def _get_attendance_locations(self, attendances, employee, check_in, check_out):
-        for attendance in attendances:
-            if check_out > check_in:
-                if attendance.employee_id == employee:
-                    if attendance.check_in == check_in:
-                        check_in_location = attendance.check_in_location
-                    elif attendance.check_out == check_in:
-                        check_in_location = attendance.check_out_location 
-                    if attendance.check_out == check_out:
-                        check_out_location = attendance.check_out_location
-                    elif attendance.check_in == check_out:
-                        check_out_location = attendance.check_in_location     
-            else:
-                if attendance.employee_id == employee:
-                    if attendance.check_in == check_in:
-                        check_in_location = attendance.check_in_location
-                    elif attendance.check_out == check_in:
-                        check_in_location = attendance.check_out_location
-                check_out_location = False
-        return {
-            "check_in_location": check_in_location if check_in_location else False,
-            "check_out_location": check_out_location if check_out_location else False
-        }
-
     @api.model
     def create_daily_report(self, date_from=None, date_to=None):
         tz = pytz.timezone('Asia/Tbilisi')
@@ -160,11 +133,8 @@ class DailyReporting(models.Model):
 
                 if attendances:
                     attendance_data = self._get_attendance_data(attendances, current_date)
-                    check_in = min(attendance_data)
-                    check_out = max(attendance_data)
-                    locations = self._get_attendance_locations(attendances, employee, check_in, check_out)
-                    check_in_location = locations["check_in_location"]
-                    check_out_location = locations["check_out_location"]
+                    check_in, check_in_location = min(attendance_data, key=lambda x: x[0])
+                    check_out, check_out_location = max(attendance_data, key=lambda x: x[0])
                     daily_report.update({
                         "check_in": check_in,
                         "check_out": check_out if check_out > check_in else None,
