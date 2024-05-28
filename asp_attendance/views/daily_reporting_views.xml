@@ -11,6 +11,8 @@
                 <field name="check_in"/>
                 <field name="check_out"/>
                 <field name="work_hours" widget="float_time"/>
+                <field name="schedule_difference" widget="float_time"/>
+                <field name="hours_in_schedule" widget="float_time"/>
                 <field name="is_not_working_day"/>
                 <field name="holiday_id"/>
                 <field name="check_in_location" />

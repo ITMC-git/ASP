@@ -38,6 +38,11 @@ class ResConfigSettings(models.TransientModel):
         config_parameter="asp.last_successful_attendance_fetch",
     )
 
+    def set_values(self):
+        super(ResConfigSettings, self).set_values()
+        self.env['ir.config_parameter'].sudo().set_param('asp_attendance.overtime_company_threshold', self.overtime_company_threshold)
+        self.env['ir.config_parameter'].sudo().set_param('asp_attendance.overtime_employee_threshold', self.overtime_employee_threshold)
+
     def check_database_connection(self):
         self.ensure_one()
         try:

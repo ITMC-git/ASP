@@ -17,6 +17,8 @@ class DailyReporting(models.Model):
     holiday_id = fields.Many2one("hr.leave")
     is_late_check_in = fields.Boolean(compute="_compute_late_check_in", store=True)
     is_after_10_check_in = fields.Boolean(compute="_compute_after_10_check_in", store=True)
+    hours_in_schedule = fields.Float()
+    schedule_difference = fields.Float(compute="_compute_schedule_differecne")
    
     @api.depends("check_in", "check_out")
     def _compute_working_hours(self):
@@ -49,6 +51,29 @@ class DailyReporting(models.Model):
                     rec.is_late_check_in = check_in.hour > hour_from
                 else:
                     rec.is_late_check_in = False
+
+    @api.depends("hours_in_schedule", "check_in", "check_out")
+    def _compute_schedule_differecne(self):
+        tolerance_time_of_company_minutes = self.env[
+            'ir.config_parameter'].sudo().get_param('asp_attendance.overtime_company_threshold')
+        tolerance_time_of_employee_minutes = self.env[
+            'ir.config_parameter'].sudo().get_param('asp_attendance.overtime_employee_threshold')
+        #Convert to hours and change type to float
+        tolerance_time_of_company_hours = float(tolerance_time_of_company_minutes) / 60.0
+        tolerance_time_of_employee_hours = float(tolerance_time_of_employee_minutes) / 60.0
+        for rec in self:
+            if rec.hours_in_schedule and rec.check_in and rec.check_out:
+                max_tolerance_time_of_compnay = rec.hours_in_schedule + tolerance_time_of_company_hours
+                max_tolerance_time_of_employee = rec.hours_in_schedule - tolerance_time_of_employee_hours
+                difference = (rec.check_out - rec.check_in).total_seconds() / 3600
+                if difference > max_tolerance_time_of_compnay:
+                    rec.schedule_difference = difference - max_tolerance_time_of_compnay 
+                elif difference < max_tolerance_time_of_employee:
+                    rec.schedule_difference = difference - max_tolerance_time_of_employee
+                else:
+                    rec.schedule_difference = 0.0
+            else:
+                rec.schedule_difference = 0.0
 
     @api.model
     def _get_attendance_data(self, attendances, today):
@@ -122,11 +147,21 @@ class DailyReporting(models.Model):
                 not_working_day_or_leave = self._not_working_day_or_leave(employee, current_date)
                 is_not_working_day = not_working_day_or_leave["not_working_day"]
                 leave = not_working_day_or_leave["leave"] if not_working_day_or_leave["leave"].holiday_id else False
-               
+                weekday = curent_date_from.weekday()
+                work_schedules = employee.resource_calendar_id.attendance_ids.filtered(
+                    lambda x: int(x.dayofweek) == weekday)
+                hours_in_schedule = 0.0
+                if work_schedules:
+                    work_hours_list = []
+                    for work_schedule in work_schedules:
+                        working_hour = work_schedule.hour_to - work_schedule.hour_from
+                        work_hours_list.append(working_hour)
+                    hours_in_schedule = sum(work_hours_list)
                 if not daily_report:
                     daily_report = self.create({
                         "date": current_date,
                         "employee_id": employee.id,
+                        "hours_in_schedule": hours_in_schedule,
                         "is_not_working_day": is_not_working_day,
                         "holiday_id":  leave.holiday_id.id if leave else False,
                     })
