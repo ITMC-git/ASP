@@ -19,6 +19,7 @@ class DailyReporting(models.Model):
     is_after_10_check_in = fields.Boolean(compute="_compute_after_10_check_in", store=True)
     hours_in_schedule = fields.Float()
     schedule_difference = fields.Float(compute="_compute_schedule_differecne")
+    change_reason = fields.Char()
    
     @api.depends("check_in", "check_out")
     def _compute_working_hours(self):

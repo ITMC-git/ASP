@@ -17,6 +17,7 @@
                 <field name="holiday_id"/>
                 <field name="check_in_location" />
                 <field name="check_out_location"/>
+                <field name="change_reason"/>
             </tree>
         </field>
     </record>
