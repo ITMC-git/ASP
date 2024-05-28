@@ -12,6 +12,7 @@ class HrAttendance(models.Model):
 
     check_in_location = fields.Char(default="Odoo")
     check_out_location = fields.Char(default="Odoo")
+    change_reason = fields.Char()
     
     def get_mysql_connection(self):
         try:

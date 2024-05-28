@@ -9,6 +9,7 @@
             <xpath expr="//field[@name='worked_hours']" position="after">
                 <field name="check_in_location"/>
                 <field name="check_out_location"/>
+                <field name="change_reason"/>
             </xpath>
         </field>
     </record>
