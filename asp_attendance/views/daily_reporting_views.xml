@@ -11,10 +11,13 @@
                 <field name="check_in"/>
                 <field name="check_out"/>
                 <field name="work_hours" widget="float_time"/>
+                <field name="schedule_difference" widget="float_time"/>
+                <field name="hours_to_work" widget="float_time"/>
                 <field name="is_not_working_day"/>
                 <field name="holiday_id"/>
                 <field name="check_in_location" />
                 <field name="check_out_location"/>
+                <field name="change_reason"/>
             </tree>
         </field>
     </record>
