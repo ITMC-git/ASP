@@ -137,9 +137,14 @@ class DailyReporting(models.Model):
                     attendance_data = self._get_attendance_data(attendances, current_date)
                     check_in = min(attendance_data)
                     check_out = max(attendance_data)
+                    if check_out > check_in:
+                        difference = (check_out - check_in).total_seconds() / 60
+                    else:
+                        difference = 0
+
                     daily_report.update({
                         "check_in": check_in,
-                        "check_out": check_out if check_out > check_in else None,
+                        "check_out": check_out if difference > 1 else None,
                     })
 
                 daily_report.update({
