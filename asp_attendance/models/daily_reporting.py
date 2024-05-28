@@ -17,7 +17,7 @@ class DailyReporting(models.Model):
     holiday_id = fields.Many2one("hr.leave")
     is_late_check_in = fields.Boolean(compute="_compute_late_check_in", store=True)
     is_after_10_check_in = fields.Boolean(compute="_compute_after_10_check_in", store=True)
-    hours_in_schedule = fields.Float()
+    hours_to_work = fields.Float()
     schedule_difference = fields.Float(compute="_compute_schedule_differecne")
     change_reason = fields.Char()
    
@@ -53,19 +53,21 @@ class DailyReporting(models.Model):
                 else:
                     rec.is_late_check_in = False
 
-    @api.depends("hours_in_schedule", "check_in", "check_out")
+    @api.depends("hours_to_work", "check_in", "check_out")
     def _compute_schedule_differecne(self):
-        tolerance_time_of_company_minutes = self.env[
-            'ir.config_parameter'].sudo().get_param('asp_attendance.overtime_company_threshold')
-        tolerance_time_of_employee_minutes = self.env[
-            'ir.config_parameter'].sudo().get_param('asp_attendance.overtime_employee_threshold')
+        '''
+        Through this method, we determine the difference between the hours worked 
+        and the hours in the schedule, but we also determine the tolerance for this time.
+        '''
+        overtime_company_threshold = self.env.company.overtime_company_threshold
+        overtime_employee_threshold = self.env.company.overtime_employee_threshold
         #Convert to hours and change type to float
-        tolerance_time_of_company_hours = float(tolerance_time_of_company_minutes) / 60.0
-        tolerance_time_of_employee_hours = float(tolerance_time_of_employee_minutes) / 60.0
+        tolerance_time_of_company_hours = float(overtime_company_threshold) / 60.0
+        tolerance_time_of_employee_hours = float(overtime_employee_threshold) / 60.0
         for rec in self:
-            if rec.hours_in_schedule and rec.check_in and rec.check_out:
-                max_tolerance_time_of_compnay = rec.hours_in_schedule + tolerance_time_of_company_hours
-                max_tolerance_time_of_employee = rec.hours_in_schedule - tolerance_time_of_employee_hours
+            if rec.hours_to_work and rec.check_in and rec.check_out:
+                max_tolerance_time_of_compnay = rec.hours_to_work + tolerance_time_of_company_hours
+                max_tolerance_time_of_employee = rec.hours_to_work - tolerance_time_of_employee_hours
                 difference = (rec.check_out - rec.check_in).total_seconds() / 3600
                 if difference > max_tolerance_time_of_compnay:
                     rec.schedule_difference = difference - max_tolerance_time_of_compnay 
@@ -131,38 +133,36 @@ class DailyReporting(models.Model):
             # Get today's attendances
             days = (date_to_tz - date_from_tz).days
             current_date = date_from_tz
-            curent_date_from = date_from_utc
+            current_date_from = date_from_utc
             for _ in range(0, days+1):
-                tomorrow = curent_date_from + timedelta(days=1)
+                tomorrow = current_date_from + timedelta(days=1)
                 attendances = self.env["hr.attendance"].search([
                     ("employee_id", "=", employee.id),
                     "|",
                     "&",
-                    ("check_in", ">=", curent_date_from),
+                    ("check_in", ">=", current_date_from),
                     ("check_in", "<", tomorrow),
                     "&",
-                    ("check_out", ">=", curent_date_from),
+                    ("check_out", ">=", current_date_from),
                     ("check_out", "<", tomorrow),
                 ])
                 daily_report = self.search([("date", "=", current_date), ("employee_id", "=", employee.id)])
                 not_working_day_or_leave = self._not_working_day_or_leave(employee, current_date)
                 is_not_working_day = not_working_day_or_leave["not_working_day"]
                 leave = not_working_day_or_leave["leave"] if not_working_day_or_leave["leave"].holiday_id else False
-                weekday = curent_date_from.weekday()
+                weekday = current_date_from.weekday()
                 work_schedules = employee.resource_calendar_id.attendance_ids.filtered(
-                    lambda x: int(x.dayofweek) == weekday)
-                hours_in_schedule = 0.0
-                if work_schedules:
-                    work_hours_list = []
-                    for work_schedule in work_schedules:
-                        working_hour = work_schedule.hour_to - work_schedule.hour_from
-                        work_hours_list.append(working_hour)
-                    hours_in_schedule = sum(work_hours_list)
+                lambda x: int(x.dayofweek) == weekday
+                )
+                # How many hours an employee should work in particular day
+                hours_to_work = sum(
+                work_schedule.hour_to - work_schedule.hour_from for work_schedule in work_schedules
+                )
                 if not daily_report:
                     daily_report = self.create({
                         "date": current_date,
                         "employee_id": employee.id,
-                        "hours_in_schedule": hours_in_schedule,
+                        "hours_to_work": hours_to_work,
                         "is_not_working_day": is_not_working_day,
                         "holiday_id":  leave.holiday_id.id if leave else False,
                     })
@@ -171,6 +171,7 @@ class DailyReporting(models.Model):
                     attendance_data = self._get_attendance_data(attendances, current_date)
                     check_in, check_in_location = min(attendance_data, key=lambda x: x[0])
                     check_out, check_out_location = max(attendance_data, key=lambda x: x[0])
+                    #if difference is 1 minute check_out shouldn't set
                     if check_out > check_in:
                         difference = (check_out - check_in).total_seconds() / 60
                     else:
@@ -187,4 +188,4 @@ class DailyReporting(models.Model):
                     "holiday_id":  leave.holiday_id.id if leave else False,
                 })
                 current_date += timedelta(days=1)
-                curent_date_from += timedelta(days=1)
+                current_date_from += timedelta(days=1)
