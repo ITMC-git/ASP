@@ -31,11 +31,29 @@ class HrAttendance(models.Model):
             return cnx
 
         except mysql.connector.Error as err:
-            _logger.error("Failed to connect to the remote MySQL database: %s", err)
+            error_message = f"Failed to connect to the remote MySQL database: {err}"
+            _logger.error(error_message)
             return None
 
         except Exception as e:
-            _logger.error("An error occurred while connecting to the database: %s", e)
+            error_message = f"An error occurred while connecting to the database: {e}"
+            _logger.error(error_message)
+            return None
+
+    def send_error_email(self, error_message):
+        config_parameter_model = self.env["ir.config_parameter"].sudo()
+        mail_to = config_parameter_model.get_param("asp.it_support_email")
+        if mail_to:
+            subject = "ASP Camera Integration Error"
+            body = f"Error: {error_message}"
+            mail_values = {
+                'subject': subject,
+                'body_html': body,
+                'email_to': mail_to,
+            }
+            mail_id = self.env['mail.mail'].sudo().create(mail_values)
+            mail_id.sudo().send()
+        else:
             return None
 
     def fetch_asp_attendance(self):
@@ -101,7 +119,9 @@ class HrAttendance(models.Model):
                 )
 
         except Exception as e:
-            _logger.error("An error occurred while fetching attendance data: %s", e)
+            error_message = f"An error occurred while fetching attendance data: {e}"
+            _logger.error(error_message)
+            self.send_error_email(error_message)
 
         finally:
             cnx.close()
