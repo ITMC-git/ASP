@@ -37,6 +37,11 @@ class ResConfigSettings(models.TransientModel):
         string="Last Successful Attendance Fetch",
         config_parameter="asp.last_successful_attendance_fetch",
     )
+    it_support_email = fields.Char(
+        string="IT Support Emails",
+        required=True,
+        config_parameter="asp.it_support_email",
+    )
 
     def check_database_connection(self):
         self.ensure_one()
