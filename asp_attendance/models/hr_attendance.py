@@ -1,7 +1,7 @@
 from datetime import datetime
 
 import mysql.connector
-from odoo import models, fields
+from odoo import api, models, fields
 import logging
 
 _logger = logging.getLogger(__name__)
@@ -113,10 +113,11 @@ class HrAttendance(models.Model):
                             "check_in": attendance_date,
                             "check_in_location": attendance_location,
                         })
-                config_parameter_model.set_param(
-                    "asp.last_successful_attendance_fetch",
-                    fields.Datetime.to_string(fields.Datetime.now())
-                )
+                if attendance_records:
+                    config_parameter_model.set_param(
+                        "asp.last_successful_attendance_fetch",
+                        fields.Datetime.to_string(fields.Datetime.now())
+                    )
 
         except Exception as e:
             error_message = f"An error occurred while fetching attendance data: {e}"
@@ -125,3 +126,24 @@ class HrAttendance(models.Model):
 
         finally:
             cnx.close()
+
+    @api.depends('check_in', 'check_out')
+    def _compute_worked_hours(self):
+        """
+        COMPLETELY_OVERRIDDEN_METHOD
+        """
+        for attendance in self:
+            if attendance.check_out and attendance.check_in:
+                # ASP changes: start
+                delta = attendance.check_out - attendance.check_in
+                worked_hours = delta.total_seconds() / 3600.0
+                # Deduct 1 hour for a break
+                if worked_hours > 0:
+                    worked_hours -= 1
+                # Cap worked hours to 8
+                if worked_hours > 8:
+                    worked_hours = 8
+                attendance.worked_hours = worked_hours
+                # ASP changes: end
+            else:
+                attendance.worked_hours = False
