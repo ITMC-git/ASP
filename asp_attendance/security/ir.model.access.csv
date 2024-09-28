@@ -1,0 +1,3 @@
+id,name,model_id/id,group_id/id,perm_read,perm_write,perm_create,perm_unlink
+access_daily_reporting,Daily Reporting,model_daily_reporting,base.group_user,1,1,1,1
+access_asp_daily_report,Daily Report Update Wizard,model_asp_update_daily_report,base.group_user,1,1,1,1

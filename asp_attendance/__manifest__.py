@@ -5,13 +5,23 @@
     "summary": "ASP Integration",
     "author": "ITMC",
     "license": "LGPL-3",
-    "depends": ["hr_attendance"],
+    "depends": ["hr_attendance", "hr_holidays"],
     "external_dependencies": {"python": ["mysql-connector-python"]},
     "data": [
+        "security/ir.model.access.csv",
         "data/ir_cron.xml",
         "views/hr_employee_views.xml",
         "views/res_config_settings_views.xml",
+        "views/daily_reporting_views.xml",
+        "views/hr_attendance_views.xml",
+        "wizard/update_daily_report.xml",
     ],
+    'assets': {
+        'web.assets_backend': [
+            'asp_attendance/static/src/js/**/*',
+            'asp_attendance/static/src/xml/**/*',
+        ],
+    },
 
     "application": True,
 }

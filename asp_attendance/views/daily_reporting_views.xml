@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="daily_reporting_view_tree" model="ir.ui.view">
+        <field name="name">daily.reporting.view.tree</field>
+        <field name="model">daily.reporting</field>
+        <field name="arch" type="xml">
+            <tree editable="bottom" js_class="asp_daily_report">
+                <field name="date"/>
+                <field name="employee_id"/>
+                <field name="check_in"/>
+                <field name="check_out"/>
+                <field name="work_hours" widget="float_time"/>
+                <field name="schedule_difference" widget="float_time"/>
+                <field name="hours_to_work" widget="float_time"/>
+                <field name="is_not_working_day"/>
+                <field name="holiday_id"/>
+                <field name="check_in_location" />
+                <field name="check_out_location"/>
+                <field name="change_reason"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="daily_reporting_view_search" model="ir.ui.view">
+        <field name="name">daily.reporting.view.search</field>
+        <field name="model">daily.reporting</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="date"/>
+                <field name="employee_id"/>
+                <field name="check_in_location"/>
+                <field name="check_out_location"/>
+                <filter string="My Attendances" name="my_attendances" domain="[('employee_id.user_id', '=', uid)]"/>
+                <separator/>
+                <filter name="missed_attendance" string="Missed Attendances" domain="[('is_not_working_day', '=', False), ('check_in', '=', False)]"/>
+                <filter name="late_check_in" string="Late Check-in" domain="[('is_late_check_in', '=', True)]"/>
+                <!-- 6 is added to context_today(). This is because the time in the database is 4 hours back.-->
+                <filter string="After 10 Check-in" name="after_10_check_in"
+                    domain="[('is_after_10_check_in', '=', True)]"/>
+                <separator/>
+                <filter string="Today's Attendances" name="todays_attendances"
+                    domain="[('date', '=', context_today())]"/>
+                <filter string="Yesterday's Attendances" name="yesterdays_attendances"
+                    domain="[('date','=', (context_today() - relativedelta(days=1)).strftime('%Y-%m-%d'))]"/>
+                <filter name="last_week_attendance" string="Last Week's Attendances" 
+                domain="[('date', '&gt;=', (context_today() - relativedelta(days=7))),('date', '&lt;=', context_today())]"/>
+                                
+                <separator/>
+                <filter name="date" string="Dates" date="date" default_period="last_month" />
+                <group expand="0" string="Group By">
+                    <filter string="Dates" name="group_by_date" context="{'group_by': 'date'}"/> 
+                    <filter string="Employees" name="group_by_employee_id" context="{'group_by': 'employee_id'}"/> 
+                    <filter string="Check-in Location" name="group_by_check_in_location" context="{'group_by': 'check_in_location'}"/> 
+                    <filter string="Check-out Location" name="group_by_check_out_location" context="{'group_by': 'check_out_location'}"/> 
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="daily_reporting_action" model="ir.actions.act_window">
+        <field name="name">Daily Reporting</field>
+        <field name="res_model">daily.reporting</field>
+        <field name="view_mode">tree</field>
+        <field name="context">{'search_default_todays_attendances': 1, 'search_default_group_by_date': 1}</field>
+    </record>
+
+    <menuitem
+        id="daily_reporting_menu"
+        name="Daily Reporting"
+        action="daily_reporting_action"
+        parent="hr_attendance.menu_hr_attendance_report"
+        groups="hr_attendance.group_hr_attendance_user"
+        sequence="10"/>
+
+</odoo>

@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime
 
 import mysql.connector
 from odoo import models, fields
@@ -10,6 +10,10 @@ _logger = logging.getLogger(__name__)
 class HrAttendance(models.Model):
     _inherit = "hr.attendance"
 
+    check_in_location = fields.Char(default="Odoo")
+    check_out_location = fields.Char(default="Odoo")
+    change_reason = fields.Char()
+    
     def get_mysql_connection(self):
         try:
             # Configure MySQL connection
@@ -27,11 +31,29 @@ class HrAttendance(models.Model):
             return cnx
 
         except mysql.connector.Error as err:
-            _logger.error("Failed to connect to the remote MySQL database: %s", err)
+            error_message = f"Failed to connect to the remote MySQL database: {err}"
+            _logger.error(error_message)
             return None
 
         except Exception as e:
-            _logger.error("An error occurred while connecting to the database: %s", e)
+            error_message = f"An error occurred while connecting to the database: {e}"
+            _logger.error(error_message)
+            return None
+
+    def send_error_email(self, error_message):
+        config_parameter_model = self.env["ir.config_parameter"].sudo()
+        mail_to = config_parameter_model.get_param("asp.it_support_email")
+        if mail_to:
+            subject = "ASP Camera Integration Error"
+            body = f"Error: {error_message}"
+            mail_values = {
+                'subject': subject,
+                'body_html': body,
+                'email_to': mail_to,
+            }
+            mail_id = self.env['mail.mail'].sudo().create(mail_values)
+            mail_id.sudo().send()
+        else:
             return None
 
     def fetch_asp_attendance(self):
@@ -66,6 +88,7 @@ class HrAttendance(models.Model):
                     if not employee_id:
                         continue
                     attendance_date = datetime.fromtimestamp(record[3] / 1000)
+                    attendance_location = record[7]  # DeviceName column in attendance record
                     existing_attendance = attendance_model.search([
                         ("employee_id", "=", employee_id.id),
                         ("check_in", "<=", attendance_date),
@@ -74,6 +97,7 @@ class HrAttendance(models.Model):
                     if existing_attendance and not existing_attendance.check_out:
                         if existing_attendance.check_in != attendance_date:
                             existing_attendance.check_out = attendance_date
+                            existing_attendance.check_out_location = attendance_location
 
                     # Create a new attendance record if:
                     # 1. No existing attendance record is found, or
@@ -87,6 +111,7 @@ class HrAttendance(models.Model):
                         attendance_model.create({
                             "employee_id": employee_id.id,
                             "check_in": attendance_date,
+                            "check_in_location": attendance_location,
                         })
                 config_parameter_model.set_param(
                     "asp.last_successful_attendance_fetch",
@@ -94,7 +119,9 @@ class HrAttendance(models.Model):
                 )
 
         except Exception as e:
-            _logger.error("An error occurred while fetching attendance data: %s", e)
+            error_message = f"An error occurred while fetching attendance data: {e}"
+            _logger.error(error_message)
+            self.send_error_email(error_message)
 
         finally:
             cnx.close()
