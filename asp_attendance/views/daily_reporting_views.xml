@@ -44,7 +44,7 @@
                 <filter string="Yesterday's Attendances" name="yesterdays_attendances"
                     domain="[('date','=', (context_today() - relativedelta(days=1)).strftime('%Y-%m-%d'))]"/>
                 <filter name="last_week_attendance" string="Last Week's Attendances" 
-                domain="[('date', '&gt;=', (context_today() - relativedelta(days=7))),('date', '&lt;=', context_today())]"/>
+                domain="[('date', '&gt;=', (context_today() - relativedelta(days=7))),('date', '&lt;', context_today())]"/>
                                 
                 <separator/>
                 <filter name="date" string="Dates" date="date" default_period="last_month" />
