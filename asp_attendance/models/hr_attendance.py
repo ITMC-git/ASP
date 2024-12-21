@@ -1,7 +1,7 @@
 from datetime import datetime
 
 import mysql.connector
-from odoo import models, fields
+from odoo import api, models, fields
 import logging
 
 _logger = logging.getLogger(__name__)
@@ -113,10 +113,11 @@ class HrAttendance(models.Model):
                             "check_in": attendance_date,
                             "check_in_location": attendance_location,
                         })
-                config_parameter_model.set_param(
-                    "asp.last_successful_attendance_fetch",
-                    fields.Datetime.to_string(fields.Datetime.now())
-                )
+                if attendance_records:
+                    config_parameter_model.set_param(
+                        "asp.last_successful_attendance_fetch",
+                        fields.Datetime.to_string(fields.Datetime.now())
+                    )
 
         except Exception as e:
             error_message = f"An error occurred while fetching attendance data: {e}"

@@ -26,7 +26,14 @@ class DailyReporting(models.Model):
         for rec in self:
             if rec.check_in and rec.check_out:
                 duration = rec.check_out - rec.check_in
-                rec.work_hours = duration.total_seconds() / 3600
+                work_hours = duration.total_seconds() / 3600
+                # Deduct 1 hour for a break
+                if work_hours > 0:
+                    work_hours -= 1
+                # Cap worked hours to 8
+                if work_hours > 8:
+                    work_hours = 8
+                rec.work_hours = work_hours
             else:
                 rec.work_hours = 0
     
@@ -68,7 +75,7 @@ class DailyReporting(models.Model):
             if rec.hours_to_work and rec.check_in and rec.check_out:
                 max_tolerance_time_of_compnay = rec.hours_to_work + tolerance_time_of_company_hours
                 max_tolerance_time_of_employee = rec.hours_to_work - tolerance_time_of_employee_hours
-                difference = (rec.check_out - rec.check_in).total_seconds() / 3600
+                difference = rec.work_hours
                 if difference > max_tolerance_time_of_compnay:
                     rec.schedule_difference = difference - max_tolerance_time_of_compnay 
                 elif difference < max_tolerance_time_of_employee:
