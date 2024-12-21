@@ -20,12 +20,31 @@ class DailyReporting(models.Model):
     hours_to_work = fields.Float()
     schedule_difference = fields.Float(compute="_compute_schedule_differecne")
     change_reason = fields.Char()
-   
+    hour_from = fields.Float()
+    hour_to = fields.Float()
+
     @api.depends("check_in", "check_out")
     def _compute_working_hours(self):
         for rec in self:
             if rec.check_in and rec.check_out:
-                duration = rec.check_out - rec.check_in
+                tz = pytz.timezone('Asia/Tbilisi')
+                check_in = fields.Datetime.context_timestamp(
+                    rec.with_context(tz='Asia/Tbilisi'),
+                    rec.check_in,
+                )
+                check_out = fields.Datetime.context_timestamp(
+                    rec.with_context(tz='Asia/Tbilisi'),
+                    rec.check_out,
+                )
+                work_from = tz.localize(datetime(
+                    check_in.year, check_in.month, check_in.day, int(rec.hour_from), 0, 0
+                ))
+                work_to = tz.localize(datetime(
+                    check_in.year, check_in.month, check_in.day, int(rec.hour_to), 0, 0
+                ))
+                start_time = max(check_in, work_from)
+                end_time = min(check_out, work_to)
+                duration = end_time - start_time
                 work_hours = duration.total_seconds() / 3600
                 # Deduct 1 hour for a break
                 if work_hours > 0:
@@ -36,7 +55,7 @@ class DailyReporting(models.Model):
                 rec.work_hours = work_hours
             else:
                 rec.work_hours = 0
-    
+
     @api.depends("check_in")
     def _compute_after_10_check_in(self):
         for rec in self:
@@ -170,6 +189,8 @@ class DailyReporting(models.Model):
                         "date": current_date,
                         "employee_id": employee.id,
                         "hours_to_work": hours_to_work,
+                        "hour_from": min(work_schedules.mapped("hour_from")),
+                        "hour_to": max(work_schedules.mapped("hour_to")),
                         "is_not_working_day": is_not_working_day,
                         "holiday_id":  leave.holiday_id.id if leave else False,
                     })
