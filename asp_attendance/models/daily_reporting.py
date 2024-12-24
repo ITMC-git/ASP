@@ -27,7 +27,7 @@ class DailyReporting(models.Model):
     def _compute_working_hours(self):
         tz = pytz.timezone('Asia/Tbilisi')
         for rec in self:
-            if rec.check_in and rec.check_out:
+            if rec.check_in and rec.check_out and not rec.is_not_working_day:
                 check_in = fields.Datetime.context_timestamp(
                     rec.with_context(tz='Asia/Tbilisi'),
                     rec.check_in,
@@ -46,16 +46,15 @@ class DailyReporting(models.Model):
                 end_time = min(check_out, work_to)
                 duration = end_time - start_time
                 work_hours = duration.total_seconds() / 3600
-                # TODO: work hours can't be more than working hours in schedule
                 # Deduct 1 hour for a break
-                if work_hours > 0:
+                if work_hours > 1:
                     work_hours -= 1
                 # Cap worked hours to 8
-                if work_hours > 8:
-                    work_hours = 8
+                if work_hours > rec.hours_to_work:
+                    work_hours = rec.hours_to_work
                 rec.work_hours = work_hours
             else:
-                rec.work_hours = 0
+                rec.work_hours = 0.0
 
     @api.depends("check_in")
     def _compute_after_10_check_in(self):
@@ -154,7 +153,6 @@ class DailyReporting(models.Model):
         date_from_tz = tz.localize(datetime.combine(date_from, time.min))
         date_from_utc = date_from_tz.astimezone(pytz.utc)
         date_to_tz = tz.localize(datetime.combine(date_to, time.min))
-        date_to_utc = date_to_tz.astimezone(pytz.utc)
 
         for employee in employees:
             # Get today's attendances
@@ -177,7 +175,6 @@ class DailyReporting(models.Model):
                 not_working_day_or_leave = self._not_working_day_or_leave(employee, current_date)
                 is_not_working_day = not_working_day_or_leave["not_working_day"]
                 leave = not_working_day_or_leave["leave"] if not_working_day_or_leave["leave"].holiday_id else False
-                # TODO : Check if this is correct
                 weekday = current_date.weekday()
                 work_schedules = employee.resource_calendar_id.attendance_ids.filtered(
                 lambda x: int(x.dayofweek) == weekday
