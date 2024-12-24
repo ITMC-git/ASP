@@ -25,9 +25,9 @@ class DailyReporting(models.Model):
 
     @api.depends("check_in", "check_out")
     def _compute_working_hours(self):
+        tz = pytz.timezone('Asia/Tbilisi')
         for rec in self:
             if rec.check_in and rec.check_out:
-                tz = pytz.timezone('Asia/Tbilisi')
                 check_in = fields.Datetime.context_timestamp(
                     rec.with_context(tz='Asia/Tbilisi'),
                     rec.check_in,
@@ -46,6 +46,7 @@ class DailyReporting(models.Model):
                 end_time = min(check_out, work_to)
                 duration = end_time - start_time
                 work_hours = duration.total_seconds() / 3600
+                # TODO: work hours can't be more than working hours in schedule
                 # Deduct 1 hour for a break
                 if work_hours > 0:
                     work_hours -= 1
@@ -176,7 +177,8 @@ class DailyReporting(models.Model):
                 not_working_day_or_leave = self._not_working_day_or_leave(employee, current_date)
                 is_not_working_day = not_working_day_or_leave["not_working_day"]
                 leave = not_working_day_or_leave["leave"] if not_working_day_or_leave["leave"].holiday_id else False
-                weekday = date_from.weekday()
+                # TODO : Check if this is correct
+                weekday = current_date.weekday()
                 work_schedules = employee.resource_calendar_id.attendance_ids.filtered(
                 lambda x: int(x.dayofweek) == weekday
                 )
@@ -189,8 +191,8 @@ class DailyReporting(models.Model):
                         "date": current_date,
                         "employee_id": employee.id,
                         "hours_to_work": hours_to_work,
-                        "hour_from": min(work_schedules.mapped("hour_from")),
-                        "hour_to": max(work_schedules.mapped("hour_to")),
+                        "hour_from": min(work_schedules.mapped("hour_from") or [0]),
+                        "hour_to": max(work_schedules.mapped("hour_to") or [0]),
                         "is_not_working_day": is_not_working_day,
                         "holiday_id":  leave.holiday_id.id if leave else False,
                     })
