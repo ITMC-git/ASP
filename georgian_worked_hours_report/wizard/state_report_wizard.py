@@ -13,4 +13,4 @@ class StateReportWizard(models.TransientModel):
             'generate_date': self.generate_date,
             'department_id': self.department_id.id,
         }
-        return self.env.ref('georgian_worked_hours_report.state_report_action').report_action(self, data=data)
+        return self.env.ref('georgian_worked_hours_report.state_report_xlsx').report_action(self, data=data)

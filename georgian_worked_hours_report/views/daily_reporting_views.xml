@@ -8,7 +8,7 @@
         <field name="arch" type="xml">
             <xpath expr="//field[@name='date']" position="before">
                 <header>
-                    <button name="%(action_generate_state_report)d" type="object" string="State Report" class="btn-secondary"/>
+                    <button name="%(action_generate_state_report)d" type="action" string="State Report" class="btn-secondary"/>
                 </header>
             </xpath>
         </field>
