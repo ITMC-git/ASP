@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="daily_reporting_view_tree" model="ir.ui.view">
+        <field name="name">daily_reporting_view_tree_inherited_geo_worked_hours_report</field>
+        <field name="model">daily.reporting</field>
+        <field name="inherit_id" ref="asp_attendance.daily_reporting_view_tree"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='date']" position="before">
+                <header>
+                    <button name="%(action_generate_state_report)d" type="object" string="State Report" class="btn-secondary"/>
+                </header>
+            </xpath>
+        </field>
+    </record>
+
+</odoo>

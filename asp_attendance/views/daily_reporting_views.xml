@@ -61,7 +61,7 @@
     <record id="daily_reporting_action" model="ir.actions.act_window">
         <field name="name">Daily Reporting</field>
         <field name="res_model">daily.reporting</field>
-        <field name="view_mode">tree</field>
+        <field name="view_mode">tree,pivot</field>
         <field name="context">{'search_default_todays_attendances': 1, 'search_default_group_by_date': 1}</field>
     </record>
 
