@@ -4,12 +4,10 @@
     "license": "LGPL-3",
     "depends": [
         "asp_attendance",
-        "hr_attendance",
-        "hr_holidays",
         "report_xlsx",
     ],
     "data": [
-        "report/report.xml",
+        "report/state_report_xlsx.xml",
         "security/ir.model.access.csv",
         "wizard/state_report_wizard.xml",
         "views/daily_reporting_views.xml",
