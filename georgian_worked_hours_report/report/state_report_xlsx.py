@@ -8,7 +8,6 @@ class StateReport(models.AbstractModel):
     _inherit = "report.report_xlsx.abstract"
     _description = "State Report"
 
-
     def generate_xlsx_report(self, workbook, data, employees):
         # HEADER: Add header related values.
         sheet = workbook.add_worksheet("Report")
