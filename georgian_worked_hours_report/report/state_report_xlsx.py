@@ -87,6 +87,7 @@ class StateReport(models.AbstractModel):
         # BODY: Add employee-specific data (working hours, overtime, etc.)
         employees = self.env["hr.employee"].search([('department_id', '=', department_id)])
         row = 14
+        last_column =  self.get_column_letter(days_in_month)
         for employee in employees:
             row += 1
             sheet.write(row, 0, employee.name, f_1)
@@ -114,8 +115,8 @@ class StateReport(models.AbstractModel):
                 else:
                     sheet.write(row, day + 2, None, f_1)
                 # Placeholder for total worked hours and overtime.
-                sheet.write(row, days_in_month + 3, None, f_1)
-                sheet.write(row, days_in_month + 4, None, f_1)
+                sheet.write_formula(row, days_in_month + 3, f"=COUNT(D{row+1}:{last_column}{row+1})", f_1)
+                sheet.write_formula(row, days_in_month + 4, f"=SUM(D{row+1}:{last_column}{row+1})", f_1)
                 sheet.write(row, days_in_month + 5, None, f_1)
                 sheet.write(row, days_in_month + 6, None, f_1)
                 sheet.write(row, days_in_month + 7, None, f_1)
@@ -135,3 +136,14 @@ class StateReport(models.AbstractModel):
         sheet.merge_range(row + 7, 3, row + 7, 7, "გვარი, სახელი", f_1)
         sheet.merge_range(row + 6, 10, row + 6, 11, None, f_1)
         sheet.merge_range(row + 7, 10, row + 7, 11, "ხელმოწერა", f_1)
+
+    def get_column_letter(self, days_in_month):
+        base_col = 68
+        column_index = base_col + days_in_month - 1
+
+        if column_index <= 90:
+            return chr(column_index)
+        else:
+            first_letter = chr((column_index - 65) // 26 + 64)
+            second_letter = chr((column_index - 65) % 26 + 65)
+            return first_letter + second_letter
