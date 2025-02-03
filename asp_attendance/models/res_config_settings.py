@@ -77,3 +77,20 @@ class ResConfigSettings(models.TransientModel):
                 }
             }
             return notification
+
+    def refetch_attendances(self):
+        last_successful_attendance_fetch = self.last_successful_attendance_fetch
+        if last_successful_attendance_fetch:
+            attendances = self.env["hr.attendance"].search([])
+            attendance_to_delete = attendances.filtered(
+                lambda x: x.check_in.date() >= last_successful_attendance_fetch.date()
+            )
+            attendance_to_delete.sudo().unlink()
+            updated_attendances = self.env["hr.attendance"].search([])
+            checkout_attendance = updated_attendances.filtered(
+                lambda x: x.check_out and x.check_out.date() >= last_successful_attendance_fetch.date()
+            )
+            checkout_attendance.check_out = False
+            self.env["hr.attendance"].fetch_asp_attendance()
+            self.env["daily.reporting"].create_daily_report(last_successful_attendance_fetch.date(), fields.Date.today())
+        return True

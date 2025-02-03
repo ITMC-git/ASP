@@ -41,7 +41,8 @@
                                 <field name="last_successful_attendance_fetch" readonly="False"/>
                             </div>
                             <div>
-                                 <button name="check_database_connection" type="object" string="Check Connection" class="btn btn-primary" />
+                                <button name="check_database_connection" type="object" string="Check Connection" class="btn btn-primary me-2" />
+                                <button string="Refetch" name="refetch_attendances" type="object" class="btn btn-primary"/>
                             </div>
                         </div>
                     </div>
