@@ -6,7 +6,7 @@
     "author": "ITMC",
     "license": "LGPL-3",
     "depends": ["hr_attendance", "hr_holidays"],
-    "external_dependencies": {"python": ["mysql-connector-python"]},
+    "external_dependencies": {"python": ["mysql-connector-python", "psycopg2"]},
     "data": [
         "security/ir.model.access.csv",
         "data/ir_cron.xml",

@@ -1,5 +1,4 @@
-import mysql.connector
-
+import psycopg2
 from odoo import fields, models, _
 
 
@@ -8,7 +7,7 @@ class ResConfigSettings(models.TransientModel):
 
     asp_db_user = fields.Char(
         string="Database User",
-        help="Database User from ASP mySQL Database.",
+        help="Database User from ASP PostgreSQL Database.",
         config_parameter="asp.asp_db_user",
         required=True,
     )
@@ -46,12 +45,12 @@ class ResConfigSettings(models.TransientModel):
     def check_database_connection(self):
         self.ensure_one()
         try:
-            conn = mysql.connector.connect(
-                host=self.asp_db_host,
+            conn = psycopg2.connect(
                 user=self.asp_db_user,
                 password=self.asp_db_password,
-                database=self.asp_db_name,
-                port=int(self.asp_db_port),
+                host=self.asp_db_host,
+                dbname=self.asp_db_name,
+                port=self.asp_db_port
             )
             conn.close()
             notification = {
@@ -65,7 +64,7 @@ class ResConfigSettings(models.TransientModel):
                 }
             }
             return notification
-        except mysql.connector.Error as err:
+        except psycopg2.Error as err:
             notification = {
                 "type": "ir.actions.client",
                 "tag": "display_notification",
